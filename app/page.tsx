@@ -3,7 +3,19 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 
-type ProcessStatus = "idle" | "uploading" | "processing" | "success" | "error";
+enum LogLevel {
+  "LIMITED" = 0,
+  "TRANSCRIPTION" = 1,
+  "FULL" = 2,
+}
+
+type ProcessStatus =
+  | "tos"
+  | "idle"
+  | "uploading"
+  | "processing"
+  | "success"
+  | "error";
 
 interface ProcessedFile {
   name: string;
@@ -13,7 +25,8 @@ interface ProcessedFile {
 }
 
 export default function Home() {
-  const [status, setStatus] = useState<ProcessStatus>("idle");
+  const [status, setStatus] = useState<ProcessStatus>("tos");
+  const [logLevel, setLogLevel] = useState<LogLevel>(LogLevel.TRANSCRIPTION);
   const [file, setFile] = useState<File | null>(null);
   const [processedFile, setProcessedFile] = useState<ProcessedFile | null>(
     null,
@@ -74,6 +87,7 @@ export default function Home() {
       // 1. Upload file (POST /api/upload)
       const uploadForm = new FormData();
       uploadForm.append("uploadedFile", file);
+      uploadForm.append("logLevel", logLevel.toString());
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
@@ -229,6 +243,160 @@ export default function Home() {
 
       {/* Main Container */}
       <main className="relative w-full max-w-2xl px-6 mt-16 flex-1 flex flex-col justify-center z-10">
+        {/* State 0: TOS query */}
+        {status === "tos" && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="text-center space-y-3">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+                Data Collection Preference
+              </h1>
+              <p className="text-zinc-400 max-w-lg mx-auto text-base">
+                Please select which level of data collection you are most
+                comfortable with. Your choice helps us respect your data privacy
+                while contributing to our research and improving our services.
+                Any data you choose to submit is securely stored and is not used
+                for any purpose other than accessibility analysis.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {/* Limited Card */}
+              <button
+                type="button"
+                onClick={() => setLogLevel(LogLevel.LIMITED)}
+                className={`group relative text-left rounded-2xl p-6 border transition-all duration-300 cursor-pointer flex flex-col justify-between glass-panel ${
+                  logLevel === LogLevel.LIMITED
+                    ? "border-violet-500 bg-violet-950/20 shadow-lg shadow-violet-500/10 scale-[1.01]"
+                    : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white tracking-wide text-lg">
+                      Limited
+                    </span>
+                    <span
+                      className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                        logLevel === LogLevel.LIMITED
+                          ? "border-violet-400 bg-violet-500"
+                          : "border-zinc-600"
+                      }`}
+                    >
+                      {logLevel === LogLevel.LIMITED && (
+                        <span className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Usage statistics are collected to monitor service health and
+                    improve performance. No document content or transcriptions
+                    are stored.
+                  </p>
+                </div>
+              </button>
+
+              {/* Transcription Card */}
+              <button
+                type="button"
+                onClick={() => setLogLevel(LogLevel.TRANSCRIPTION)}
+                className={`group relative text-left rounded-2xl p-6 border transition-all duration-300 cursor-pointer flex flex-col justify-between glass-panel ${
+                  logLevel === LogLevel.TRANSCRIPTION
+                    ? "border-violet-500 bg-violet-950/20 shadow-lg shadow-violet-500/10 scale-[1.01]"
+                    : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white tracking-wide text-lg">
+                      Transcription
+                    </span>
+                    <span
+                      className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                        logLevel === LogLevel.TRANSCRIPTION
+                          ? "border-violet-400 bg-violet-500"
+                          : "border-zinc-600"
+                      }`}
+                    >
+                      {logLevel === LogLevel.TRANSCRIPTION && (
+                        <span className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    The service processes documents ephemerally; original files
+                    are immediately discarded and never used for research. For
+                    operational diagnostics, the system retains only high-level
+                    processing data, such as image transcriptions and extracted
+                    text fragments.
+                  </p>
+                </div>
+              </button>
+
+              {/* Full Card */}
+              <button
+                type="button"
+                onClick={() => setLogLevel(LogLevel.FULL)}
+                className={`group relative text-left rounded-2xl p-6 border transition-all duration-300 cursor-pointer flex flex-col justify-between glass-panel ${
+                  logLevel === LogLevel.FULL
+                    ? "border-violet-500 bg-violet-950/20 shadow-lg shadow-violet-500/10 scale-[1.01]"
+                    : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white tracking-wide text-lg">
+                      Full
+                    </span>
+                    <span
+                      className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                        logLevel === LogLevel.FULL
+                          ? "border-violet-400 bg-violet-500"
+                          : "border-zinc-600"
+                      }`}
+                    >
+                      {logLevel === LogLevel.FULL && (
+                        <span className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Allows the service to utilize transcription data and source
+                    material exclusively for academic research and
+                    service-enhancement analytics.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-center pt-4">
+              <button
+                id="tos-confirm-btn"
+                onClick={() => setStatus("idle")}
+                className="relative group overflow-hidden px-8 py-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold shadow-lg shadow-violet-600/20 hover:shadow-violet-600/40 hover:scale-[1.02] transition-all duration-200"
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span className="flex items-center gap-2">
+                  Confirm & Continue
+                  <svg
+                    className="h-4 w-4 transform group-hover:translate-x-1 transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    />
+                  </svg>
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* State 1: Idle (Upload prompted) */}
         {status === "idle" && (
           <div className="space-y-8 animate-fade-in">
@@ -376,9 +544,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div>
-
-            </div>
+            <div></div>
           </div>
         )}
 

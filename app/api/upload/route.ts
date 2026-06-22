@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
 
     const forwardData = new FormData();
     forwardData.append("uploadedFile", file, file.name);
+    forwardData.append("logLevel", formData.get("logLevel") as string);
 
     const apiKey = process.env.BACKEND_API_KEY;
     const apiAddr = process.env.BACKEND_API_ADDR;
