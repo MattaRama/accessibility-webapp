@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import Image from "next/image";
 
 enum LogLevel {
   "LIMITED" = 0,
@@ -62,8 +61,10 @@ export default function Home() {
   };
 
   const validateAndSetFile = (selectedFile: File) => {
-    if (!selectedFile.name.endsWith(".docx")) {
-      setErrorMsg("Invalid file type. Please upload a .docx Word document.");
+    const isDocx = selectedFile.name.endsWith(".docx");
+    const isPptx = selectedFile.name.endsWith(".pptx");
+    if (!isDocx && !isPptx) {
+      setErrorMsg("Invalid file type. Please upload a .docx Word document or a .pptx PowerPoint presentation.");
       setStatus("error");
       setFile(null);
       return;
@@ -111,8 +112,9 @@ export default function Home() {
       // 2. Subscribe and wait for completion (GET /api/subscribe?jobId=...)
       setStatus("processing");
 
+      const fileType = file.name.endsWith(".pptx") ? "pptx" : "docx";
       const subscribeRes = await fetch(
-        `/api/subscribe?jobId=${encodeURIComponent(jobId)}`,
+        `/api/subscribe?jobId=${encodeURIComponent(jobId)}&fileType=${fileType}`,
       );
 
       if (!subscribeRes.ok) {
@@ -129,23 +131,27 @@ export default function Home() {
         throw new Error("Processing completed but no file data was returned.");
       }
 
+      const isPptx = file.name.endsWith(".pptx");
       setProcessedFile({
         name:
-          subscribeData.name || file.name.replace(".docx", "_processed.docx"),
+          subscribeData.name ||
+          (isPptx
+            ? file.name.replace(".pptx", "_processed.pptx")
+            : file.name.replace(".docx", "_processed.docx")),
         size: subscribeData.size || file.size,
         mimetype:
           subscribeData.mimetype ||
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          (isPptx
+            ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
         data: subscribeData.data,
       });
 
       setStatus("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(
-        err.message ||
-          "An unexpected error occurred while processing the document.",
-      );
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred while processing the document.";
+      setErrorMsg(errMsg);
       setStatus("error");
     }
   };
@@ -409,7 +415,7 @@ export default function Home() {
                 </span>*/}
               </h1>
               <p className="text-zinc-400 max-w-lg mx-auto text-base">
-                Upload your Word document (.docx) to automatically generate
+                Upload your Word document (.docx) or PowerPoint presentation (.pptx) to automatically generate
                 relevant alt text for images in the document.
               </p>
             </div>
@@ -435,7 +441,7 @@ export default function Home() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept=".docx"
+                accept=".docx,.pptx"
                 className="hidden"
               />
 
@@ -478,7 +484,7 @@ export default function Home() {
                     </span>
                   </p>
                   <p className="text-xs text-zinc-500">
-                    Supports only Microsoft Word files (.docx) up to 25MB
+                    Supports Microsoft Word (.docx) and PowerPoint (.pptx) files up to 25MB
                   </p>
                 </div>
               )}
@@ -602,7 +608,7 @@ export default function Home() {
                     {processedFile.name}
                   </p>
                   <p className="text-xs text-zinc-500 font-mono mt-0.5">
-                    {formatBytes(processedFile.size)} • Microsoft Word Document
+                    {formatBytes(processedFile.size)} • {processedFile.name.endsWith(".docx") ? "Microsoft Word Document" : "PowerPoint Presentation"}
                   </p>
                 </div>
               </div>
@@ -634,7 +640,7 @@ export default function Home() {
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
-                  Download DOCX
+                  Download {processedFile.name.endsWith(".docx") ? "DOCX" : "PPTX"}
                 </span>
               </button>
 

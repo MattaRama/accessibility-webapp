@@ -14,8 +14,17 @@ export async function POST(request: NextRequest) {
     forwardData.append("logLevel", formData.get("logLevel") as string);
 
     const apiKey = process.env.BACKEND_API_KEY;
-    const apiAddr = process.env.BACKEND_API_ADDR;
-    const response = await fetch(apiAddr!, {
+    const isPptx = file.name.endsWith(".pptx");
+    const apiAddr = isPptx ? process.env.BACKEND_PPTX_API_ADDR : process.env.BACKEND_API_ADDR;
+
+    if (!apiAddr) {
+      return NextResponse.json(
+        { error: `Backend API address is not configured for ${isPptx ? ".pptx" : ".docx"} files` },
+        { status: 500 }
+      );
+    }
+
+    const response = await fetch(apiAddr, {
       method: "POST",
       headers: {
         ...(apiKey ? { "Authorization": `Bearer ${apiKey}` } : {}),
@@ -33,10 +42,11 @@ export async function POST(request: NextRequest) {
 
     const json = await response.json();
     return NextResponse.json(json);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Upload error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to process file upload";
     return NextResponse.json(
-      { error: error.message || "Failed to process file upload" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
