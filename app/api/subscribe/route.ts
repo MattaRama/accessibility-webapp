@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import http from "http";
+import https from "https";
 
-// Helper function to send a GET request with a body using Node.js native http module
+// Helper function to send a GET request with a body using Node.js native http/https module
 function getWithBody(
   url: string,
   body: string,
@@ -9,9 +10,12 @@ function getWithBody(
 ): Promise<{ status: number; text: string }> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
+    const isHttps = parsedUrl.protocol === "https:";
+    const transport = isHttps ? https : http;
+    
     const options = {
       hostname: parsedUrl.hostname,
-      port: parsedUrl.port || 80,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
       path: parsedUrl.pathname + parsedUrl.search,
       method: "GET",
       headers: {
@@ -20,7 +24,7 @@ function getWithBody(
       },
     };
 
-    const req = http.request(options, (res) => {
+    const req = transport.request(options, (res) => {
       let data = "";
       res.on("data", (chunk) => {
         data += chunk;
