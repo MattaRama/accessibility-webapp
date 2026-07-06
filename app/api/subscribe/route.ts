@@ -1,50 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import http from "http";
-import https from "https";
-
-// Helper function to send a GET request with a body using Node.js native http/https module
-function getWithBody(
-  url: string,
-  body: string,
-  headers: Record<string, string>
-): Promise<{ status: number; text: string }> {
-  return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const isHttps = parsedUrl.protocol === "https:";
-    const transport = isHttps ? https : http;
-    
-    const options = {
-      hostname: parsedUrl.hostname,
-      port: parsedUrl.port || (isHttps ? 443 : 80),
-      path: parsedUrl.pathname + parsedUrl.search,
-      method: "GET",
-      headers: {
-        ...headers,
-        "Content-Length": Buffer.byteLength(body),
-      },
-    };
-
-    const req = transport.request(options, (res) => {
-      let data = "";
-      res.on("data", (chunk) => {
-        data += chunk;
-      });
-      res.on("end", () => {
-        resolve({
-          status: res.statusCode || 200,
-          text: data,
-        });
-      });
-    });
-
-    req.on("error", (e) => {
-      reject(e);
-    });
-
-    req.write(body);
-    req.end();
-  });
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,10 +11,7 @@ export async function GET(request: NextRequest) {
 
     const apiKey = process.env.BACKEND_API_KEY;
 
-    const requestBody = JSON.stringify({ jobId });
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = {};
     if (apiKey) {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
@@ -77,20 +28,20 @@ export async function GET(request: NextRequest) {
     }
 
     const baseAddr = apiAddr.endsWith("/") ? apiAddr : `${apiAddr}/`;
-    const result = await getWithBody(
-      `${baseAddr}subscribe`,
-      requestBody,
-      headers
-    );
+    const response = await fetch(`${baseAddr}subscribe?jobId=${jobId}`, {
+      method: "GET",
+      headers,
+    });
 
-    if (result.status < 200 || result.status >= 300) {
+    if (!response.ok) {
+      const errorText = await response.text();
       return NextResponse.json(
-        { error: `Backend subscription failed (status ${result.status}): ${result.text}` },
-        { status: result.status }
+        { error: `Backend subscription failed (status ${response.status}): ${errorText}` },
+        { status: response.status }
       );
     }
 
-    const json = JSON.parse(result.text);
+    const json = await response.json();
     return NextResponse.json(json);
   } catch (error: unknown) {
     console.error("Subscription error:", error);
